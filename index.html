@@ -7,9 +7,14 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
-    <!-- PDF出力用のライブラリを追加 -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <!-- PDF出力用のライブラリを変更（html2canvasは不要に） -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <!-- 日本語フォントデータをインポート -->
+    <script src="https://raw.githack.com/MrRio/jsPDF/master/src/libs/rawdeflate.js"></script>
+	<script src="https://raw.githack.com/MrRio/jsPDF/master/src/libs/png_support/png.js"></script>
+	<script src="https://raw.githack.com/MrRio/jsPDF/master/src/libs/png_support/zlib.js"></script>
+    <script src="https://unpkg.com/jspdf-autotable@3.5.23/dist/jspdf.plugin.autotable.js"></script>
+    
     <style>
         body {
             /* 標準的な日本語フォントを指定 */
@@ -316,24 +321,36 @@
         
         <footer class="text-center mt-8 text-sm text-gray-400">
             <p>&copy; 2025 オペレーションコストEye. All Rights Reserved.</p>
-            <p class="mt-1">Version 8.0 (Final)</p>
+            <p class="mt-1">Version 9.0 (Final)</p>
         </footer>
     </div>
 
 <script>
+// --- jsPDFに日本語フォントを読み込ませるためのデータ ---
+// フォントデータは非常に長いため、外部ファイルから読み込みます。
+// この方法は、jsPDFの公式でも推奨されている方法です。
+let mplusFont = '';
+fetch('https://raw.githack.com/MrRio/jsPDF/master/test/reference/mplus-1p-regular.ttf.base64')
+    .then(response => response.text())
+    .then(data => {
+        mplusFont = data;
+        console.log('日本語フォントの読み込みが完了しました。');
+    }).catch(e => {
+        console.error('フォントの読み込みに失敗しました。', e);
+        alert('PDF出力用の日本語フォントの読み込みに失敗しました。ページを再読み込みしてください。');
+    });
+
 // --- Chart.jsのグローバル設定 ---
 Chart.register(ChartDataLabels);
-// グラフのデフォルトフォントも変更
 Chart.defaults.font.family = "'Meiryo', 'Hiragino Kaku Gothic ProN', 'MS PGothic', sans-serif";
-Chart.defaults.plugins.datalabels.display = false; // デフォルトでは非表示
+Chart.defaults.plugins.datalabels.display = false;
 
 // --- DOM要素の取得 (共通) ---
 const tabBackward = document.getElementById('tab-backward');
 const tabForward = document.getElementById('tab-forward');
 const contentBackward = document.getElementById('content-backward');
 const contentForward = document.getElementById('content-forward');
-const pdfExportBtn = document.getElementById('pdf-export-btn'); // PDFボタン
-
+const pdfExportBtn = document.getElementById('pdf-export-btn');
 
 // --- 逆算モードの要素 ---
 const b_inputs = {
@@ -385,40 +402,26 @@ const createDetailSectionHTML = (modePrefix) => {
                 </button>
             </div>
         </div>
-
-        <!-- 作業工程セクション -->
         <div class="bg-gray-50 p-4 rounded-lg mb-4">
             <div class="flex justify-between items-center mb-2 cursor-pointer" id="${modePrefix}-toggle-processes">
                 <h4 class="font-semibold text-gray-800 flex justify-between items-center w-full">
-                    <span>
-                        作業工程
-                        <span id="${modePrefix}-processes-total" class="text-sm font-normal text-gray-500 ml-2"></span>
-                    </span>
+                    <span>作業工程<span id="${modePrefix}-processes-total" class="text-sm font-normal text-gray-500 ml-2"></span></span>
                     <button type="button" class="text-xs text-red-500 hover:text-red-700 font-semibold section-clear-btn" data-target-list="${modePrefix}-processes-list">全削除</button>
                 </h4>
                 <span class="text-sm text-gray-500 transform transition-transform ml-2">▼</span>
             </div>
-            <div id="${modePrefix}-processes-list">
-                <!-- ここに動的に作業工程が追加される -->
-            </div>
+            <div id="${modePrefix}-processes-list"></div>
             <button type="button" id="${modePrefix}-add-process" class="mt-2 text-sm text-indigo-700 font-semibold hover:text-indigo-900">+ 作業工程を追加</button>
         </div>
-
-        <!-- 資材・経費セクション -->
         <div class="bg-gray-50 p-4 rounded-lg">
             <div class="flex justify-between items-center mb-2 cursor-pointer" id="${modePrefix}-toggle-materials">
                 <h4 class="font-semibold text-gray-800 flex justify-between items-center w-full">
-                    <span>
-                        資材・経費
-                        <span id="${modePrefix}-materials-total" class="text-sm font-normal text-gray-500 ml-2"></span>
-                    </span>
+                    <span>資材・経費<span id="${modePrefix}-materials-total" class="text-sm font-normal text-gray-500 ml-2"></span></span>
                     <button type="button" class="text-xs text-red-500 hover:text-red-700 font-semibold section-clear-btn" data-target-list="${modePrefix}-materials-list">全削除</button>
                 </h4>
                 <span class="text-sm text-gray-500 transform transition-transform ml-2">▼</span>
             </div>
-            <div id="${modePrefix}-materials-list">
-                <!-- ここに動的に資材が追加される -->
-            </div>
+            <div id="${modePrefix}-materials-list"></div>
             <button type="button" id="${modePrefix}-add-material" class="mt-2 text-sm text-indigo-700 font-semibold hover:text-indigo-900">+ 資材を追加</button>
         </div>
     `;
@@ -429,7 +432,6 @@ const setupDetailItems = (modePrefix, initialProcesses, initialMaterials) => {
     const detailsSection = document.getElementById(`${modePrefix}-details-section`);
     detailsSection.innerHTML = createDetailSectionHTML(modePrefix);
     
-    //積算モードの場合のタイトルを修正
     if(modePrefix === 'f'){
         detailsSection.querySelector('h3').textContent = '① 作業原価の内訳';
     }
@@ -447,22 +449,17 @@ const setupDetailItems = (modePrefix, initialProcesses, initialMaterials) => {
                 <input type="text" class="input-field text-sm" placeholder="項目名" value="${name}" style="flex-basis: 40%;">
                 <input type="number" class="input-field text-sm process-input" placeholder="秒数" value="${value}" style="flex-basis: 25%;">
                 <span class="process-cost p-2 text-sm text-gray-700 text-right whitespace-nowrap" style="flex-basis: 25%;">¥0</span>
-                <button type="button" class="btn-delete" style="flex-basis: 10%;">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/><path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/></svg>
-                </button>
+                <button type="button" class="btn-delete" style="flex-basis: 10%;"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/><path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/></svg></button>
             `;
-        } else { // material
+        } else {
             item.innerHTML = `
                 <input type="text" class="input-field text-sm" placeholder="項目名" value="${name}">
                 <input type="number" class="input-field text-sm material-input" placeholder="金額" value="${value}">
-                <button type="button" class="btn-delete">
-                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/><path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/></svg>
-                </button>
+                <button type="button" class="btn-delete"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/><path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/></svg></button>
             `;
         }
 
         list.appendChild(item);
-        // 新しく追加した項目にもイベントリスナーを設定
         item.querySelector('input').addEventListener('input', recalculate);
         item.querySelector('.process-input, .material-input')?.addEventListener('input', recalculate);
         item.querySelector('.btn-delete').addEventListener('click', () => {
@@ -471,7 +468,6 @@ const setupDetailItems = (modePrefix, initialProcesses, initialMaterials) => {
         });
     };
 
-    // ヘッダーを追加
     const processHeader = document.createElement('div');
     processHeader.className = 'detail-item detail-item-header text-xs text-gray-500 font-bold';
     processHeader.innerHTML = `
@@ -485,7 +481,6 @@ const setupDetailItems = (modePrefix, initialProcesses, initialMaterials) => {
     addProcessBtn.addEventListener('click', () => addItem(processesList, '', '', 'process'));
     addMaterialBtn.addEventListener('click', () => addItem(materialsList, '', '', 'material'));
     
-    // 折りたたみ機能
     document.getElementById(`${modePrefix}-toggle-processes`).addEventListener('click', (e) => {
         const h4 = e.currentTarget.querySelector('h4');
         if (e.target !== h4 && !h4.contains(e.target)) return;
@@ -501,7 +496,6 @@ const setupDetailItems = (modePrefix, initialProcesses, initialMaterials) => {
         e.currentTarget.querySelector('span:last-child').classList.toggle('rotate-180');
     });
     
-    // セクションクリア機能
     detailsSection.querySelectorAll('.section-clear-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             e.stopPropagation(); 
@@ -513,7 +507,6 @@ const setupDetailItems = (modePrefix, initialProcesses, initialMaterials) => {
         });
     });
 
-    // 初期項目の追加
     initialProcesses.forEach(p => addItem(processesList, p.name, p.value, 'process'));
     initialMaterials.forEach(m => addItem(materialsList, m.name, m.value, 'material'));
 };
@@ -523,34 +516,30 @@ const setupDetailItems = (modePrefix, initialProcesses, initialMaterials) => {
 const getCostDetails = (modePrefix) => {
     const hourlyCost = parseFloat(document.getElementById(`${modePrefix}-hourly-cost`).value) || 0;
     
-    let totalWorkTime = 0;
-    const processDetails = [];
-    const secondCost = hourlyCost / 3600;
-
-    document.querySelectorAll(`#${modePrefix}-processes-list .process-input`).forEach(input => {
-        const time = parseFloat(input.value) || 0;
-        const cost = time * secondCost;
-        totalWorkTime += time;
-        const name = input.previousElementSibling.value || '無名の工程';
-        processDetails.push({name, time, cost});
+    const processDetails = Array.from(document.querySelectorAll(`#${modePrefix}-processes-list .detail-item:not(.detail-item-header)`)).map(item => {
+        const name = item.querySelector('input[type="text"]').value || '無名の工程';
+        const time = parseFloat(item.querySelector('.process-input').value) || 0;
+        const cost = time * (hourlyCost / 3600);
+        return { name, time, cost };
     });
 
-    let totalMaterialCost = 0;
-    document.querySelectorAll(`#${modePrefix}-materials-list .material-input`).forEach(input => {
-        totalMaterialCost += parseFloat(input.value) || 0;
+    const materialDetails = Array.from(document.querySelectorAll(`#${modePrefix}-materials-list .detail-item`)).map(item => {
+        const name = item.querySelector('input[type="text"]').value || '無名の資材';
+        const cost = parseFloat(item.querySelector('.material-input').value) || 0;
+        return { name, cost };
     });
 
+    const totalWorkTime = processDetails.reduce((sum, p) => sum + p.time, 0);
     const laborCost = processDetails.reduce((sum, p) => sum + p.cost, 0);
+    const totalMaterialCost = materialDetails.reduce((sum, m) => sum + m.cost, 0);
     const totalCost = laborCost + totalMaterialCost;
 
-    return { totalCost, processDetails, totalWorkTime, totalMaterialCost, hourlyCost, laborCost };
+    return { totalCost, processDetails, materialDetails, totalWorkTime, totalMaterialCost, hourlyCost, laborCost };
 };
 
 const updateIndividualCostsAndTotals = (modePrefix, hourlyCost, totalWorkTime, totalMaterialCost, laborCost) => {
     const secondCost = hourlyCost / 3600;
-    // 個別の人件費を更新
-    document.querySelectorAll(`#${modePrefix}-processes-list .detail-item`).forEach(item => {
-        if (item.classList.contains('detail-item-header')) return;
+    document.querySelectorAll(`#${modePrefix}-processes-list .detail-item:not(.detail-item-header)`).forEach(item => {
         const timeInput = item.querySelector('.process-input');
         if (!timeInput) return;
         const time = parseFloat(timeInput.value) || 0;
@@ -560,7 +549,6 @@ const updateIndividualCostsAndTotals = (modePrefix, hourlyCost, totalWorkTime, t
             costDisplay.textContent = formatCurrency(cost);
         }
     });
-    // ヘッダーの合計値を更新
     document.getElementById(`${modePrefix}-processes-total`).textContent = `(合計: ${totalWorkTime}秒 / ${formatCurrency(laborCost)})`;
     document.getElementById(`${modePrefix}-materials-total`).textContent = `(合計: ${formatCurrency(totalMaterialCost)})`;
 };
@@ -570,7 +558,7 @@ function calculateBackward() {
     const myProfitRate = parseFloat(b_inputs.myProfitRate.value) / 100 || 0;
     const vendorProfitRate = parseFloat(b_inputs.vendorProfitRate.value) / 100 || 0;
     
-    const { totalCost, processDetails, totalWorkTime, totalMaterialCost, hourlyCost, laborCost } = getCostDetails('b');
+    const { totalCost, processDetails, materialDetails, totalWorkTime, totalMaterialCost, hourlyCost, laborCost } = getCostDetails('b');
     
     updateIndividualCostsAndTotals('b', hourlyCost, totalWorkTime, totalMaterialCost, laborCost);
 
@@ -603,7 +591,7 @@ function calculateForward() {
     const vendorProfitRate = parseFloat(f_inputs.vendorProfitRate.value) / 100 || 0;
     const myProfitRate = parseFloat(f_inputs.myProfitRate.value) / 100 || 0;
     
-    const { totalCost, processDetails, totalWorkTime, totalMaterialCost, hourlyCost, laborCost } = getCostDetails('f');
+    const { totalCost, processDetails, materialDetails, totalWorkTime, totalMaterialCost, hourlyCost, laborCost } = getCostDetails('f');
 
     updateIndividualCostsAndTotals('f', hourlyCost, totalWorkTime, totalMaterialCost, laborCost);
 
@@ -655,17 +643,13 @@ const updateLaborChart = (modePrefix, processDetails) => {
                 datasets: [{
                     label: '人件費 (円)',
                     data: data,
-                    backgroundColor: [
-                        'rgba(59, 130, 246, 0.8)', 'rgba(239, 68, 68, 0.8)',
-                        'rgba(245, 158, 11, 0.8)','rgba(16, 185, 129, 0.8)',
-                        'rgba(139, 92, 246, 0.8)','rgba(236, 72, 153, 0.8)',
-                    ],
+                    backgroundColor: ['rgba(59, 130, 246, 0.8)', 'rgba(239, 68, 68, 0.8)', 'rgba(245, 158, 11, 0.8)','rgba(16, 185, 129, 0.8)', 'rgba(139, 92, 246, 0.8)','rgba(236, 72, 153, 0.8)'],
                     borderColor: '#fff',
                     borderWidth: 2
                 }]
             },
             options: {
-                animation: false, // PDF出力のためにアニメーションを無効化
+                animation: false,
                 responsive: true,
                 plugins: {
                     legend: { position: 'bottom', },
@@ -688,7 +672,7 @@ const updateLaborChart = (modePrefix, processDetails) => {
                         formatter: (value, ctx) => {
                             const total = ctx.chart.data.datasets[0].data.reduce((a,b) => a+b, 0);
                             const percentage = total > 0 ? (value / total * 100).toFixed(1) + '%' : '0%';
-                             if (value / total < 0.05) return ''; // 5%未満は非表示
+                             if (value / total < 0.05) return '';
                             return `${formatCurrency(value)}\n(${percentage})`;
                         },
                         color: '#fff',
@@ -709,14 +693,13 @@ const updateCompositionChart = (modePrefix, data) => {
 
     const labels = ['人件費', '資材費', '倉庫利益', '自社利益'];
     const values = [data.labor, data.material, data.vendorProfit, data.ownProfit];
-    // 自社利益がマイナスの場合、グラフでは0として扱うが合計値の計算には実数を使う
     const graphValues = values.map(v => Math.max(0, v)); 
     const total = values.reduce((a, b) => a + b, 0);
 
     if (chartInstance) {
         chartInstance.data.datasets[0].data = graphValues;
         chartInstance.options.plugins.title.text = `最終請求額の構成 (合計: ${formatCurrency(total)})`;
-        chartInstance.update('none'); // アニメーションなしで更新
+        chartInstance.update('none');
     } else {
         const newChart = new Chart(ctx, {
             type: 'pie',
@@ -725,18 +708,13 @@ const updateCompositionChart = (modePrefix, data) => {
                 datasets: [{
                     label: '金額 (円)',
                     data: graphValues,
-                    backgroundColor: [
-                        'rgba(54, 162, 235, 0.8)',
-                        'rgba(255, 206, 86, 0.8)',
-                        'rgba(255, 99, 132, 0.8)',
-                        'rgba(75, 192, 192, 0.8)'
-                    ],
+                    backgroundColor: ['rgba(54, 162, 235, 0.8)', 'rgba(255, 206, 86, 0.8)', 'rgba(255, 99, 132, 0.8)', 'rgba(75, 192, 192, 0.8)'],
                     borderColor: '#fff',
                     borderWidth: 2
                 }]
             },
             options: {
-                animation: false, // PDF出力のためにアニメーションを無効化
+                animation: false,
                 responsive: true,
                 plugins: {
                     legend: { position: 'bottom' },
@@ -746,7 +724,6 @@ const updateCompositionChart = (modePrefix, data) => {
                             label: function(context) {
                                 let label = context.label || '';
                                 if (label) { label += ': '; }
-                                // ツールチップには実際の値を表示
                                 const originalValue = values[context.dataIndex];
                                 if (originalValue !== null) {
                                     const percentage = total > 0 ? (originalValue / total * 100).toFixed(1) : 0;
@@ -761,7 +738,7 @@ const updateCompositionChart = (modePrefix, data) => {
                         formatter: (value, ctx) => {
                              const originalValue = values[ctx.dataIndex];
                              const percentage = total > 0 ? (originalValue / total * 100).toFixed(1) + '%' : '0%';
-                             if (originalValue / total < 0.05 && originalValue >= 0) return ''; // 5%未満は非表示
+                             if (originalValue / total < 0.05 && originalValue >= 0) return '';
                              return `${formatCurrency(originalValue)}\n(${percentage})`;
                         },
                         color: '#fff',
@@ -776,107 +753,151 @@ const updateCompositionChart = (modePrefix, data) => {
     }
 };
 
-// --- PDF出力機能 ---
+// --- ★★★ PDF出力機能を全面的に刷新 ★★★ ---
 const exportToPDF = async () => {
     const { jsPDF } = window.jspdf;
-    const captureArea = document.getElementById('capture-area');
+    
+    // --- 1. PDF出力の準備 ---
+    const pdfExportBtn = document.getElementById('pdf-export-btn');
     const originalButtonHtml = pdfExportBtn.innerHTML;
-
-    // ボタンを処理中の表示に変更
     pdfExportBtn.disabled = true;
     pdfExportBtn.innerHTML = 'PDF生成中...';
-
-    // 現在アクティブなタブを特定
-    const isBackwardActive = tabBackward.classList.contains('tab-active');
-    const activeContent = isBackwardActive ? contentBackward : contentForward;
-    const inactiveContent = isBackwardActive ? contentForward : contentBackward;
-    const modeName = isBackwardActive ? 'backward' : 'forward';
     
-    // アクティブなタブにあるグラフのCanvas要素を取得
-    const chartCanvases = activeContent.querySelectorAll('canvas');
-    const tempImageStore = [];
-
-    // 元のbodyの背景色を保存
-    const originalBodyBg = document.body.style.backgroundColor;
+    if (!mplusFont) {
+        alert('フォントがまだ読み込まれていません。数秒待ってからもう一度お試しください。');
+        pdfExportBtn.disabled = false;
+        pdfExportBtn.innerHTML = originalButtonHtml;
+        return;
+    }
 
     try {
-        // ★★★ 根本対策：Bodyの背景を白にする ★★★
-        document.body.style.backgroundColor = '#ffffff';
+        // --- 2. データ収集 ---
+        const isBackwardActive = tabBackward.classList.contains('tab-active');
+        const modePrefix = isBackwardActive ? 'b' : 'f';
+        const { processDetails, materialDetails, totalWorkTime, totalMaterialCost, hourlyCost, laborCost } = getCostDetails(modePrefix);
+        
+        const myProfitRate = parseFloat(document.getElementById(`${modePrefix}-my-profit-rate`).value) || 0;
+        const vendorProfitRate = parseFloat(document.getElementById(`${modePrefix}-vendor-profit-rate`).value) || 0;
+        const totalCost = laborCost + totalMaterialCost;
+        
+        let finalPrice = 0;
+        let myProfit = 0;
+        let paymentToVendor = 0;
 
-        // ★★★ グラフを画像に変換 ★★★
-        for (const chartCanvas of chartCanvases) {
-            const chartInstance = Chart.getChart(chartCanvas);
-            if (chartInstance) {
-                const imgDataUrl = chartInstance.toBase64Image();
-                const img = new Image();
-                img.src = imgDataUrl;
-                img.style.width = chartCanvas.style.width;
-                img.style.height = chartCanvas.style.height;
-                img.classList.add('temp-chart-image');
-                chartCanvas.style.display = 'none';
-                chartCanvas.parentNode.insertBefore(img, chartCanvas);
-                tempImageStore.push({ canvas: chartCanvas, image: img });
+        if(isBackwardActive) {
+            finalPrice = parseFloat(b_inputs.price.value) || 0;
+            paymentToVendor = totalCost * (1 + vendorProfitRate / 100);
+            myProfit = finalPrice - paymentToVendor;
+        } else {
+            paymentToVendor = totalCost * (1 + vendorProfitRate / 100);
+            if (myProfitRate < 100) {
+                 finalPrice = paymentToVendor / (1 - myProfitRate / 100);
+                 myProfit = finalPrice - paymentToVendor;
+            } else {
+                 finalPrice = paymentToVendor;
+                 myProfit = 0;
             }
         }
         
-        // 非表示のタブをDOMから一時的に削除
-        if (inactiveContent.parentNode) {
-            inactiveContent.parentNode.removeChild(inactiveContent);
-        }
-        
-        // ブラウザの再描画を待つ
-        await new Promise(resolve => setTimeout(resolve, 100));
-
-        // html2canvasで要素をキャプチャ
-        const canvas = await html2canvas(captureArea, {
-            scale: 2,
-            backgroundColor: '#ffffff', // ★★★ 背景色を明示的に指定 ★★★
-            logging: true
-        });
-
-        const imgData = canvas.toDataURL('image/png');
-        
-        // PDFの準備 (A4縦)
+        // --- 3. PDFインスタンスとフォント設定 ---
         const pdf = new jsPDF('p', 'mm', 'a4');
-        const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = pdf.internal.pageSize.getHeight();
+        pdf.addFileToVFS('mplus-1p-regular.ttf', mplusFont);
+        pdf.addFont('mplus-1p-regular.ttf', 'mplus', 'normal');
+        pdf.setFont('mplus');
+
+        // --- 4. PDF描画 ---
+        const MARGIN = 15;
+        const pageW = pdf.internal.pageSize.width;
+        let y = MARGIN;
+
+        // ヘッダー
+        pdf.setFontSize(20);
+        pdf.text('オペレーションコストEye レポート', pageW / 2, y, { align: 'center' });
+        y += 10;
+        pdf.setFontSize(10);
+        const reportDate = new Date().toLocaleString('ja-JP');
+        pdf.text(`出力日時: ${reportDate}`, pageW - MARGIN, y, { align: 'right' });
+        y += 8;
+
+        // モードタイトル
+        pdf.setFontSize(14);
+        pdf.setFillColor(243, 244, 246);
+        pdf.rect(MARGIN, y-5, pageW - (MARGIN*2), 10, 'F');
+        const modeTitle = isBackwardActive ? "逆算モード (請求額から予算を算出)" : "積算モード (原価から請求額を算出)";
+        pdf.text(modeTitle, MARGIN + 2, y);
+        y+=15;
         
-        const imgWidth = canvas.width;
-        const imgHeight = canvas.height;
+        // テーブル形式で詳細を描画
+        const tableColumnStyles = { 0: { cellWidth: 50 }, 1: { cellWidth: 30, halign: 'right' }};
+        const headStyles = { fillColor: [67, 56, 202] };
         
-        const ratio = imgWidth / imgHeight;
-        let widthInPdf = pdfWidth - 20;
-        let heightInPdf = widthInPdf / ratio;
+        // 作業工程
+        pdf.setFontSize(12);
+        pdf.text('作業原価の内訳', MARGIN, y);
+        y += 6;
+        const processBody = processDetails.map(p => [p.name, `${p.time.toFixed(1)} 秒`, formatCurrency(p.cost)]);
+        processBody.push([{ content: '作業人件費 合計', colSpan: 2, styles: { halign: 'right', fontStyle: 'bold' } }, { content: formatCurrency(laborCost), styles: { fontStyle: 'bold' } }]);
+        pdf.autoTable({
+            startY: y,
+            head: [['作業工程', '時間', '人件費']],
+            body: processBody,
+            theme: 'grid',
+            headStyles: headStyles,
+            styles: { font: 'mplus', fontSize: 9 },
+            columnStyles: { 0: {cellWidth: 80}, 1: {halign: 'right'}, 2: {halign: 'right'} }
+        });
+        y = pdf.autoTable.previous.finalY + 10;
         
-        if (heightInPdf > pdfHeight - 20) {
-            heightInPdf = pdfHeight - 20;
-            widthInPdf = heightInPdf * ratio;
+        // 資材・経費
+        if(materialDetails.length > 0) {
+            const materialBody = materialDetails.map(m => [m.name, formatCurrency(m.cost)]);
+            materialBody.push([{ content: '資材・経費 合計', styles: { halign: 'right', fontStyle: 'bold' } }, { content: formatCurrency(totalMaterialCost), styles: { fontStyle: 'bold' } }]);
+            pdf.autoTable({
+                startY: y,
+                head: [['資材・経費', '金額']],
+                body: materialBody,
+                theme: 'grid',
+                headStyles: headStyles,
+                styles: { font: 'mplus', fontSize: 9 },
+                columnStyles: { 0: {cellWidth: 125}, 1: {halign: 'right'} }
+            });
+            y = pdf.autoTable.previous.finalY + 10;
         }
 
-        const x = (pdfWidth - widthInPdf) / 2;
-        const y = (pdfHeight - heightInPdf) / 2;
+        // 最終計算結果
+        pdf.setFontSize(12);
+        pdf.text('最終計算結果', MARGIN, y);
+        y += 6;
+        const resultsBody = [
+            ['作業原価 合計 (人件費 + 資材費)', formatCurrency(totalCost)],
+            [`倉庫への支払額 (原価 x (1 + ${vendorProfitRate}%))`, formatCurrency(paymentToVendor)],
+            ['自社利益', formatCurrency(myProfit)],
+            [{content: '顧客への最終請求額', styles: {fontStyle: 'bold'}}, {content: formatCurrency(finalPrice), styles: {fontStyle: 'bold'}}]
+        ];
+        pdf.autoTable({
+            startY: y,
+            body: resultsBody,
+            theme: 'plain',
+            styles: { font: 'mplus', fontSize: 10, cellPadding: 2 },
+            columnStyles: { 0: {cellWidth: 100}, 1: {halign: 'right'} }
+        });
+        y = pdf.autoTable.previous.finalY + 15;
         
-        pdf.addImage(imgData, 'PNG', x, y, widthInPdf, heightInPdf);
-        pdf.save(`operation-cost-eye-report-${modeName}.pdf`);
+        // グラフ
+        const chartW = (pageW - MARGIN * 3) / 2;
+        const chart1 = Chart.getChart('b-labor-chart').toBase64Image();
+        const chart2 = Chart.getChart('b-composition-chart').toBase64Image();
+        pdf.addImage(chart1, 'PNG', MARGIN, y, chartW, chartW);
+        pdf.addImage(chart2, 'PNG', MARGIN + chartW + MARGIN, y, chartW, chartW);
+
+        // --- 5. PDF保存 ---
+        const fileName = `operation-cost-eye-report-${modeName}.pdf`;
+        pdf.save(fileName);
 
     } catch (error) {
         console.error('PDFの生成に失敗しました:', error);
         alert('PDFの生成に失敗しました。コンソールログを確認してください。');
     } finally {
-        // ★★★ 処理が終わったら必ず元の状態に戻す ★★★
-        document.body.style.backgroundColor = originalBodyBg;
-
-        tempImageStore.forEach(item => {
-            item.canvas.style.display = 'block';
-            if (item.image.parentNode) {
-                item.image.parentNode.removeChild(item.image);
-            }
-        });
-        
-        if (!inactiveContent.parentNode) {
-            captureArea.insertBefore(inactiveContent, activeContent.nextSibling);
-        }
-
         pdfExportBtn.disabled = false;
         pdfExportBtn.innerHTML = originalButtonHtml;
     }
@@ -951,7 +972,7 @@ const initializeApp = () => {
     setTimeout(() => {
         calculateBackward();
         calculateForward();
-    }, 100); // 100msの遅延
+    }, 100); 
 }
 
 window.addEventListener('load', initializeApp);
