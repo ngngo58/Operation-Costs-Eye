@@ -10,7 +10,6 @@
     <!-- PDF出力用のライブラリを追加 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <!-- 外部フォントの読み込みを削除し、標準フォントを使用するように変更 -->
     <style>
         body {
             /* 標準的な日本語フォントを指定 */
@@ -317,7 +316,7 @@
         
         <footer class="text-center mt-8 text-sm text-gray-400">
             <p>&copy; 2025 オペレーションコストEye. All Rights Reserved.</p>
-            <p class="mt-1">Version 5.0 (Final)</p>
+            <p class="mt-1">Version 6.0 (Final)</p>
         </footer>
     </div>
 
@@ -789,18 +788,44 @@ const exportToPDF = async () => {
 
     // 現在アクティブなタブを特定
     const isBackwardActive = tabBackward.classList.contains('tab-active');
+    const activeContent = isBackwardActive ? contentBackward : contentForward;
     const inactiveContent = isBackwardActive ? contentForward : contentBackward;
     const modeName = isBackwardActive ? 'backward' : 'forward';
-    const parent = inactiveContent.parentNode;
+    
+    // アクティブなタブにあるグラフのCanvas要素を取得
+    const chartCanvases = activeContent.querySelectorAll('canvas');
+    const tempImageStore = [];
 
     try {
+        // ★★★ 新しいアプローチ：グラフを画像に変換 ★★★
+        for (const chartCanvas of chartCanvases) {
+            // Chart.jsのインスタンスを取得
+            const chartInstance = Chart.getChart(chartCanvas);
+            if (chartInstance) {
+                // グラフをBase64形式の画像データに変換
+                const imgDataUrl = chartInstance.toBase64Image();
+                
+                // 元のCanvasを非表示にする
+                chartCanvas.style.display = 'none';
+
+                // 静的な画像を作成して元のCanvasの前に挿入
+                const img = new Image();
+                img.src = imgDataUrl;
+                img.style.width = chartCanvas.style.width;
+                img.style.height = chartCanvas.style.height;
+                img.classList.add('temp-chart-image'); // 後で削除するための目印
+                chartCanvas.parentNode.insertBefore(img, chartCanvas);
+                tempImageStore.push({ canvas: chartCanvas, image: img });
+            }
+        }
+        
         // 非表示のタブをDOMから一時的に削除
-        if (parent.contains(inactiveContent)) {
-            parent.removeChild(inactiveContent);
+        if (inactiveContent.parentNode) {
+            inactiveContent.parentNode.removeChild(inactiveContent);
         }
         
         // ブラウザの再描画を待つ
-        await new Promise(resolve => requestAnimationFrame(resolve));
+        await new Promise(resolve => setTimeout(resolve, 100));
 
         // html2canvasで要素をキャプチャ
         const canvas = await html2canvas(captureArea, {
@@ -843,11 +868,18 @@ const exportToPDF = async () => {
         console.error('PDFの生成に失敗しました:', error);
         alert('PDFの生成に失敗しました。コンソールログを確認してください。');
     } finally {
-        // 処理が終わったら、削除した要素を必ず元に戻す
-        if (!parent.contains(inactiveContent)) {
-            // 元の場所に戻す（contentBackwardの次）
-            parent.insertBefore(inactiveContent, contentBackward.nextSibling);
+        // ★★★ 処理が終わったら必ず元の状態に戻す ★★★
+        // 一時的な画像を削除し、元のグラフを再表示
+        tempImageStore.forEach(item => {
+            item.canvas.style.display = 'block';
+            item.image.remove();
+        });
+        
+        // 削除したタブを元に戻す
+        if (!inactiveContent.parentNode) {
+            captureArea.insertBefore(inactiveContent, activeContent.nextSibling);
         }
+
         pdfExportBtn.disabled = false;
         pdfExportBtn.innerHTML = originalButtonHtml;
     }
@@ -929,4 +961,4 @@ window.addEventListener('load', initializeApp);
 
 </script>
 </body>
-</html>
+</ht
