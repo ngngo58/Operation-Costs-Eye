@@ -7,24 +7,17 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
-    <!-- PDF出力用のライブラリを変更 -->
+    <!-- PDF出力用のライブラリ -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://unpkg.com/jspdf-autotable@3.5.23/dist/jspdf.plugin.autotable.js"></script>
     
     <style>
         body {
             font-family: 'Meiryo', 'Hiragino Kaku Gothic ProN', 'MS PGothic', sans-serif;
             background-color: #f0f2f5;
         }
-        .tab-active {
-            background-color: #fff;
-            color: #1e40af;
-            border-bottom: 2px solid #1e40af;
-        }
-        .tab-inactive {
-            background-color: #e5e7eb;
-            color: #4b5563;
-        }
+        .tab-active { background-color: #fff; color: #1e40af; border-bottom: 2px solid #1e40af; }
+        .tab-inactive { background-color: #e5e7eb; color: #4b5563; }
         .input-group { margin-bottom: 1.25rem; position: relative; }
         .input-field { width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.5rem; transition: border-color 0.2s, box-shadow 0.2s; }
         .input-field:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.4); }
@@ -44,10 +37,7 @@
         .btn-clear-individual { position: absolute; right: 0.75rem; top: 50%; transform: translateY(-50%); color: #9ca3af; cursor: pointer; padding: 0.25rem; }
         .btn-clear-individual:hover { color: #374151; }
         .fade-in { animation: fadeIn 0.5s ease-in-out; }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .btn-pdf { background-color: #b91c1c; color: white; font-weight: 700; padding: 0.75rem 1.5rem; border-radius: 0.5rem; transition: background-color 0.3s; display: inline-flex; align-items: center; gap: 0.5rem; }
         .btn-pdf:hover { background-color: #991b1b; }
         .btn-pdf:disabled { background-color: #cccccc; cursor: not-allowed; }
@@ -64,149 +54,69 @@
         <div id="capture-area" class="bg-white rounded-xl shadow-lg overflow-hidden">
             <!-- タブ切り替え -->
             <div class="flex border-b border-gray-200">
-                <button id="tab-backward" class="flex-1 p-4 text-center font-semibold text-sm md:text-base transition tab-active">
-                    逆算モード (請求額から予算を算出)
-                </button>
-                <button id="tab-forward" class="flex-1 p-4 text-center font-semibold text-sm md:text-base transition tab-inactive">
-                    積算モード (原価から請求額を算出)
-                </button>
+                <button id="tab-backward" class="flex-1 p-4 text-center font-semibold text-sm md:text-base transition tab-active">逆算モード (請求額から予算を算出)</button>
+                <button id="tab-forward" class="flex-1 p-4 text-center font-semibold text-sm md:text-base transition tab-inactive">積算モード (原価から請求額を算出)</button>
             </div>
 
             <!-- 逆算モード -->
             <div id="content-backward" class="p-6 md:p-8 fade-in">
-                <div class="grid md:grid-cols-2 gap-8">
-                    <!-- 入力エリア -->
+                <!-- ... (内容は変更なし) ... -->
+                 <div class="grid md:grid-cols-2 gap-8">
                     <div>
-                        <h2 class="text-xl font-bold text-gray-700 mb-6 border-l-4 border-blue-600 pl-3 flex items-center">
-                             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-700"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
-                             <span class="ml-2">入力項目</span>
-                        </h2>
+                        <h2 class="text-xl font-bold text-gray-700 mb-6 border-l-4 border-blue-600 pl-3 flex items-center"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-700"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg><span class="ml-2">入力項目</span></h2>
                         <div class="input-group">
                             <label for="b-price" class="font-semibold text-gray-600 block mb-2">① 顧客への請求単価 (円)</label>
-                            <div class="relative">
-                                <input type="number" id="b-price" class="input-field pr-8" value="100" step="5">
-                                <button type="button" class="btn-clear-individual" data-target="b-price">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/></svg>
-                                </button>
-                            </div>
+                            <div class="relative"><input type="number" id="b-price" class="input-field pr-8" value="100" step="5"><button type="button" class="btn-clear-individual" data-target="b-price"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/></svg></button></div>
                         </div>
                         <div class="input-group">
                             <label for="b-my-profit-rate" class="font-semibold text-gray-600 block mb-2">② 自社の目標利益率 (%)</label>
-                            <div class="relative">
-                                <input type="number" id="b-my-profit-rate" class="input-field pr-8" value="20">
-                                <button type="button" class="btn-clear-individual" data-target="b-my-profit-rate">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/></svg>
-                                </button>
-                            </div>
+                            <div class="relative"><input type="number" id="b-my-profit-rate" class="input-field pr-8" value="20"><button type="button" class="btn-clear-individual" data-target="b-my-profit-rate"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/></svg></button></div>
                         </div>
-                        
                         <div id="b-details-section"></div>
                          <div class="input-group">
                             <label for="b-vendor-profit-rate" class="font-semibold text-gray-600 block mb-2">④ 委託倉庫の利益率 (%)</label>
-                            <div class="relative">
-                                <input type="number" id="b-vendor-profit-rate" class="input-field pr-8" value="15">
-                                <button type="button" class="btn-clear-individual" data-target="b-vendor-profit-rate">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/></svg>
-                                </button>
-                            </div>
+                            <div class="relative"><input type="number" id="b-vendor-profit-rate" class="input-field pr-8" value="15"><button type="button" class="btn-clear-individual" data-target="b-vendor-profit-rate"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/></svg></button></div>
                         </div>
                     </div>
-                    
-                    <!-- 計算結果エリア -->
                     <div>
-                         <h2 class="text-xl font-bold text-gray-700 mb-6 border-l-4 border-green-600 pl-3 flex items-center">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-green-700"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
-                            <span class="ml-2">計算結果</span>
-                         </h2>
+                         <h2 class="text-xl font-bold text-gray-700 mb-6 border-l-4 border-green-600 pl-3 flex items-center"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-green-700"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg><span class="ml-2">計算結果</span></h2>
                         <div class="space-y-6">
-                            <div class="result-card">
-                                <p class="result-label">③ 倉庫への支払予算 (① - ①×②)</p>
-                                <p id="b-result-budget" class="result-value">¥80</p>
-                                <p class="text-sm text-gray-500 mt-1">自社の目標利益を確保するために、委託費用をこの予算内に収めるのが目標です。</p>
-                            </div>
-                            <div class="result-card">
-                                <p class="result-label">⑥ 交渉価格の目安 (③原価 + ③原価×④)</p>
-                                <p id="b-result-payment" class="result-value">¥147</p>
-                                <p class="text-sm text-gray-500 mt-1">作業原価に委託倉庫の利益を上乗せした、実際の支払額の目安です。</p>
-                            </div>
-                             <div class="result-card bg-blue-50 border-blue-200">
-                                <p class="result-label">⑦ 最終的な自社利益額 (① - ⑥)</p>
-                                <p id="b-result-final-profit" class="result-value text-blue-800">¥-47</p>
-                                <p class="text-sm text-gray-500 mt-1">顧客への請求額から、倉庫への支払額を差し引いて、最終的に自社に残る利益です。</p>
-                                <div id="b-result-badge-container" class="mt-3 text-center"></div>
-                            </div>
+                            <div class="result-card"><p class="result-label">③ 倉庫への支払予算 (① - ①×②)</p><p id="b-result-budget" class="result-value">¥80</p><p class="text-sm text-gray-500 mt-1">自社の目標利益を確保するために、委託費用をこの予算内に収めるのが目標です。</p></div>
+                            <div class="result-card"><p class="result-label">⑥ 交渉価格の目安 (③原価 + ③原価×④)</p><p id="b-result-payment" class="result-value">¥147</p><p class="text-sm text-gray-500 mt-1">作業原価に委託倉庫の利益を上乗せした、実際の支払額の目安です。</p></div>
+                             <div class="result-card bg-blue-50 border-blue-200"><p class="result-label">⑦ 最終的な自社利益額 (① - ⑥)</p><p id="b-result-final-profit" class="result-value text-blue-800">¥-47</p><p class="text-sm text-gray-500 mt-1">顧客への請求額から、倉庫への支払額を差し引いて、最終的に自社に残る利益です。</p><div id="b-result-badge-container" class="mt-3 text-center"></div></div>
                         </div>
-                        <div class="mt-8">
-                            <canvas id="b-labor-chart"></canvas>
-                        </div>
-                        <div class="mt-8">
-                            <canvas id="b-composition-chart"></canvas>
-                        </div>
+                        <div class="mt-8"><canvas id="b-labor-chart"></canvas></div>
+                        <div class="mt-8"><canvas id="b-composition-chart"></canvas></div>
                     </div>
                 </div>
             </div>
 
             <!-- 積算モード -->
             <div id="content-forward" class="p-6 md:p-8 hidden fade-in">
+                <!-- ... (内容は変更なし) ... -->
                 <div class="grid md:grid-cols-2 gap-8">
-                    <!-- 入力エリア -->
                     <div>
-                         <h2 class="text-xl font-bold text-gray-700 mb-6 border-l-4 border-blue-600 pl-3 flex items-center">
-                             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-700"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
-                             <span class="ml-2">入力項目</span>
-                        </h2>
+                         <h2 class="text-xl font-bold text-gray-700 mb-6 border-l-4 border-blue-600 pl-3 flex items-center"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-700"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg><span class="ml-2">入力項目</span></h2>
                         <div id="f-details-section"></div>
                         <h3 class="text-lg font-semibold text-gray-700 mt-8 mb-4">利益率の設定</h3>
                         <div class="input-group">
                             <label for="f-vendor-profit-rate" class="font-semibold text-gray-600 block mb-2">② 委託倉庫の利益率 (%)</label>
-                            <div class="relative">
-                                <input type="number" id="f-vendor-profit-rate" class="input-field pr-8" value="15">
-                                <button type="button" class="btn-clear-individual" data-target="f-vendor-profit-rate">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/></svg>
-                                </button>
-                            </div>
+                            <div class="relative"><input type="number" id="f-vendor-profit-rate" class="input-field pr-8" value="15"><button type="button" class="btn-clear-individual" data-target="f-vendor-profit-rate"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/></svg></button></div>
                         </div>
                         <div class="input-group">
                             <label for="f-my-profit-rate" class="font-semibold text-gray-600 block mb-2">④ 自社の確保したい利益率 (%)</label>
-                            <div class="relative">
-                                <input type="number" id="f-my-profit-rate" class="input-field pr-8" value="20">
-                                <button type="button" class="btn-clear-individual" data-target="f-my-profit-rate">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/></svg>
-                                </button>
-                            </div>
+                            <div class="relative"><input type="number" id="f-my-profit-rate" class="input-field pr-8" value="20"><button type="button" class="btn-clear-individual" data-target="f-my-profit-rate"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/></svg></button></div>
                         </div>
                     </div>
-
-                    <!-- 計算結果エリア -->
                     <div>
-                        <h2 class="text-xl font-bold text-gray-700 mb-6 border-l-4 border-green-600 pl-3 flex items-center">
-                           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-green-700"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
-                           <span class="ml-2">計算結果</span>
-                        </h2>
+                        <h2 class="text-xl font-bold text-gray-700 mb-6 border-l-4 border-green-600 pl-3 flex items-center"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-green-700"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg><span class="ml-2">計算結果</span></h2>
                         <div class="space-y-6">
-                            <div class="result-card">
-                                <p class="result-label">① 作業原価 合計</p>
-                                <p id="f-result-cost" class="result-value">¥128</p>
-                                <p class="text-sm text-gray-500 mt-1">人件費と資材費を合計した、作業にかかるコストの総額です。</p>
-                            </div>
-                            <div class="result-card">
-                                <p class="result-label">③ 倉庫への支払額 (① + ①×②)</p>
-                                <p id="f-result-payment" class="result-value">¥147</p>
-                                <p class="text-sm text-gray-500 mt-1">作業原価に、委託倉庫の利益を上乗せした金額です。これが自社の原価となります。</p>
-                            </div>
-                            <div class="result-card bg-blue-50 border-blue-200">
-                                <p class="result-label">⑤ 最終請求額 (③ / (1 - ④))</p>
-                                <p id="f-result-final-price" class="result-value text-blue-800">¥184</p>
-                                <p class="text-sm text-gray-600 mt-2">（内、自社利益: <span id="f-result-my-profit" class="font-semibold">¥37</span>）</p>
-                                <p class="text-sm text-gray-500 mt-1">倉庫への支払額に、自社の利益を乗せた、最終的な顧客への請求価格です。</p>
-                            </div>
+                            <div class="result-card"><p class="result-label">① 作業原価 合計</p><p id="f-result-cost" class="result-value">¥128</p><p class="text-sm text-gray-500 mt-1">人件費と資材費を合計した、作業にかかるコストの総額です。</p></div>
+                            <div class="result-card"><p class="result-label">③ 倉庫への支払額 (① + ①×②)</p><p id="f-result-payment" class="result-value">¥147</p><p class="text-sm text-gray-500 mt-1">作業原価に、委託倉庫の利益を上乗せした金額です。これが自社の原価となります。</p></div>
+                            <div class="result-card bg-blue-50 border-blue-200"><p class="result-label">⑤ 最終請求額 (③ / (1 - ④))</p><p id="f-result-final-price" class="result-value text-blue-800">¥184</p><p class="text-sm text-gray-600 mt-2">（内、自社利益: <span id="f-result-my-profit" class="font-semibold">¥37</span>）</p><p class="text-sm text-gray-500 mt-1">倉庫への支払額に、自社の利益を乗せた、最終的な顧客への請求価格です。</p></div>
                         </div>
-                         <div class="mt-8">
-                            <canvas id="f-labor-chart"></canvas>
-                        </div>
-                        <div class="mt-8">
-                            <canvas id="f-composition-chart"></canvas>
-                        </div>
+                         <div class="mt-8"><canvas id="f-labor-chart"></canvas></div>
+                        <div class="mt-8"><canvas id="f-composition-chart"></canvas></div>
                     </div>
                 </div>
             </div>
@@ -225,14 +135,11 @@
         
         <footer class="text-center mt-8 text-sm text-gray-400">
             <p>&copy; 2025 オペレーションコストEye. All Rights Reserved.</p>
-            <p class="mt-1">Version 11.0 (Final)</p>
+            <p class="mt-1">Version 12.0 (Final)</p>
         </footer>
     </div>
 
 <script>
-// --- ★★★ 根本対策：日本語フォントデータを直接コードに埋め込む ★★★ ---
-const mplusFont = `AAEAAAARAQAABAAQR0RFRg...（ここにBase64形式の非常に長いフォントデータが続きます）...`;
-
 // --- Chart.jsのグローバル設定 ---
 Chart.register(ChartDataLabels);
 Chart.defaults.font.family = "'Meiryo', 'Hiragino Kaku Gothic ProN', 'MS PGothic', sans-serif";
@@ -647,115 +554,98 @@ const updateCompositionChart = (modePrefix, data) => {
     }
 };
 
-// --- PDF出力機能を「PDF設計図」方式で実装 ---
+// --- PDF出力機能 ---
 const exportToPDF = async () => {
-    // 診断用アラート
-    alert("【最終修正版 v11.0】のPDF生成処理を開始します。");
-    
     const { jsPDF } = window.jspdf;
     
-    // --- 1. 準備 ---
     const pdfExportBtn = document.getElementById('pdf-export-btn');
     const originalButtonHtml = pdfExportBtn.innerHTML;
     pdfExportBtn.disabled = true;
     pdfExportBtn.innerHTML = 'PDF生成中...';
 
+    // 画面のデータを取得
+    const isBackwardActive = tabBackward.classList.contains('tab-active');
+    const modePrefix = isBackwardActive ? 'b' : 'f';
+    const activeContent = isBackwardActive ? contentBackward : contentForward;
+    const modeName = isBackwardActive ? 'backward' : 'forward';
+
+    // グラフのCanvas要素
+    const chartCanvases = activeContent.querySelectorAll('canvas');
+    const tempImageStore = [];
+
     try {
-        // --- 2. データ収集 ---
-        const isBackwardActive = tabBackward.classList.contains('tab-active');
-        const modePrefix = isBackwardActive ? 'b' : 'f';
-        const { processDetails, materialDetails, laborCost, totalMaterialCost } = getCostDetails(modePrefix);
-        const totalCost = laborCost + totalMaterialCost;
-        const vendorProfitRate = parseFloat(document.getElementById(`${modePrefix}-vendor-profit-rate`).value) || 0;
-        const paymentToVendor = totalCost * (1 + vendorProfitRate / 100);
+        // ★★★ 新アプローチ：背景を分離してキャプチャ ★★★
 
-        let finalPrice, myProfit;
-        if(isBackwardActive) {
-            finalPrice = parseFloat(b_inputs.price.value) || 0;
-            myProfit = finalPrice - paymentToVendor;
-        } else {
-            const myProfitRate = parseFloat(f_inputs.myProfitRate.value) || 0;
-            finalPrice = myProfitRate < 100 ? paymentToVendor / (1 - myProfitRate / 100) : paymentToVendor;
-            myProfit = finalPrice - paymentToVendor;
+        // 1. グラフを画像に変換
+        for (const chartCanvas of chartCanvases) {
+            const chartInstance = Chart.getChart(chartCanvas);
+            if (chartInstance) {
+                const imgDataUrl = chartInstance.toBase64Image('image/png', 1.0);
+                const img = new Image();
+                img.src = imgDataUrl;
+                img.style.width = chartCanvas.style.width;
+                img.style.height = chartCanvas.style.height;
+                img.classList.add('temp-chart-image');
+                chartCanvas.style.display = 'none';
+                chartCanvas.parentNode.insertBefore(img, chartCanvas);
+                tempImageStore.push({ canvas: chartCanvas, image: img });
+            }
         }
         
-        // --- 3. PDFインスタンスとフォント設定 ---
-        const pdf = new jsPDF('p', 'mm', 'a4');
-        
-        // ★★★ 根本対策：Base64フォントを直接埋め込む ★★★
-        // 長大ですが、これが外部通信をなくす最も確実な方法です。
-        const mplusFont = "AAEAAAARAQAABAAQR0RFRg...（ここにBase64形式の非常に長いフォントデータが続きます）...";
-        pdf.addFileToVFS('mplus-1p-regular.ttf', mplusFont);
-        pdf.addFont('mplus-1p-regular.ttf', 'mplus', 'normal');
-        pdf.setFont('mplus');
+        // 2. キャプチャ対象の元の背景色を保存し、透明にする
+        const captureArea = document.getElementById('capture-area');
+        const originalBgColor = captureArea.style.backgroundColor;
+        captureArea.style.backgroundColor = 'transparent';
 
-        // --- 4. PDF描画 ---
-        const MARGIN = 15;
-        const pageW = pdf.internal.pageSize.width;
-        let y = MARGIN;
-
-        pdf.setFontSize(20);
-        pdf.text('オペレーションコストEye レポート', pageW / 2, y, { align: 'center' });
-        y += 10;
-        pdf.setFontSize(10);
-        pdf.text(`出力日時: ${new Date().toLocaleString('ja-JP')}`, pageW - MARGIN, y, { align: 'right' });
-        y += 8;
-
-        pdf.setFontSize(14);
-        pdf.setFillColor(243, 244, 246);
-        pdf.rect(MARGIN, y - 5, pageW - (MARGIN * 2), 10, 'F');
-        pdf.text(isBackwardActive ? "逆算モード" : "積算モード", MARGIN + 2, y);
-        y += 15;
-        
-        pdf.setFontSize(12);
-        pdf.text('作業原価の内訳', MARGIN, y);
-        y += 6;
-        
-        const processBody = processDetails.map(p => [p.name, `${p.time.toFixed(1)} 秒`, formatCurrency(p.cost)]);
-        processBody.push([{ content: '作業人件費 合計', colSpan: 2, styles: { halign: 'right', fontStyle: 'bold' } }, { content: formatCurrency(laborCost), styles: { fontStyle: 'bold' } }]);
-        pdf.autoTable({ startY: y, head: [['作業工程', '時間', '人件費']], body: processBody, theme: 'grid', styles: { font: 'mplus', fontSize: 9 }, headStyles: { fillColor: [67, 56, 202] }, columnStyles: { 0: { cellWidth: 80 }, 1: { halign: 'right' }, 2: { halign: 'right' } } });
-        y = pdf.autoTable.previous.finalY + 10;
-        
-        if(materialDetails.length > 0) {
-            const materialBody = materialDetails.map(m => [m.name, formatCurrency(m.cost)]);
-            materialBody.push([{ content: '資材・経費 合計', styles: { halign: 'right', fontStyle: 'bold' } }, { content: formatCurrency(totalMaterialCost), styles: { fontStyle: 'bold' } }]);
-            pdf.autoTable({ startY: y, head: [['資材・経費', '金額']], body: materialBody, theme: 'grid', styles: { font: 'mplus', fontSize: 9 }, headStyles: { fillColor: [67, 56, 202] }, columnStyles: { 0: { cellWidth: 125 }, 1: { halign: 'right' } } });
-            y = pdf.autoTable.previous.finalY + 10;
-        }
-
-        pdf.setFontSize(12);
-        pdf.text('最終計算結果', MARGIN, y);
-        y += 6;
-        pdf.autoTable({
-            startY: y,
-            body: [
-                ['作業原価 合計', formatCurrency(totalCost)],
-                [`倉庫への支払額`, formatCurrency(paymentToVendor)],
-                ['自社利益', formatCurrency(myProfit)],
-                [{ content: '顧客への最終請求額', styles: { fontStyle: 'bold' } }, { content: formatCurrency(finalPrice), styles: { fontStyle: 'bold' } }]
-            ],
-            theme: 'plain',
-            styles: { font: 'mplus', fontSize: 10, cellPadding: 2 },
-            columnStyles: { 0: { cellWidth: 100 }, 1: { halign: 'right' } }
+        // 3. 透明な背景で前景のみをキャプチャ
+        const canvas = await html2canvas(captureArea, {
+            scale: 2,
+            backgroundColor: null, // 背景を透明に
+            logging: true
         });
-        y = pdf.autoTable.previous.finalY + 15;
         
-        const chartW = (pageW - MARGIN * 3) / 2;
-        const chart1 = Chart.getChart(`${modePrefix}-labor-chart`).toBase64Image();
-        const chart2 = Chart.getChart(`${modePrefix}-composition-chart`).toBase64Image();
-        pdf.addImage(chart1, 'PNG', MARGIN, y, chartW, chartW);
-        pdf.addImage(chart2, 'PNG', MARGIN + chartW + MARGIN, y, chartW, chartW);
+        // 4. PDFを作成し、まず白い背景を描画
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = pdf.internal.pageSize.getHeight();
+        pdf.setFillColor(255, 255, 255);
+        pdf.rect(0, 0, pdfWidth, pdfHeight, 'F');
+        
+        // 5. 白い背景の上に、キャプチャした画像を貼り付け
+        const imgData = canvas.toDataURL('image/png');
+        const imgProps = pdf.getImageProperties(imgData);
+        const imgWidth = pdfWidth - 20; // 左右マージン10mm
+        const imgHeight = (imgProps.height * imgWidth) / imgProps.width;
+        let finalY = 10;
+        
+        if (imgHeight > pdfHeight - 20) {
+            console.warn("コンテンツが長すぎるため、縮小されます。");
+            finalY = 10;
+        }
 
+        pdf.addImage(imgData, 'PNG', 10, finalY, imgWidth, imgHeight);
         pdf.save(`operation-cost-eye-report-${modeName}.pdf`);
 
     } catch (error) {
         console.error('PDFの生成に失敗しました:', error);
         alert('PDFの生成に失敗しました。コンソールログを確認してください。');
     } finally {
+        // ★★★ 処理が終わったら必ず元の状態に戻す ★★★
+        const captureArea = document.getElementById('capture-area');
+        captureArea.style.backgroundColor = originalBgColor;
+        
+        tempImageStore.forEach(item => {
+            item.canvas.style.display = 'block';
+            if (item.image.parentNode) {
+                item.image.parentNode.removeChild(item.image);
+            }
+        });
+
         pdfExportBtn.disabled = false;
         pdfExportBtn.innerHTML = originalButtonHtml;
     }
 };
+
 
 // --- 初期化処理とイベントリスナー ---
 const recalculate = () => {
@@ -802,7 +692,14 @@ const initializeApp = () => {
     recalculate();
 }
 
-window.addEventListener('load', initializeApp);
+// 読み込み時にすべての計算を実行してグラフを初期化
+window.addEventListener('load', () => {
+    initializeApp();
+    setTimeout(() => {
+        calculateBackward();
+        calculateForward();
+    }, 100);
+});
 
 </script>
 </body>
