@@ -316,7 +316,7 @@
         
         <footer class="text-center mt-8 text-sm text-gray-400">
             <p>&copy; 2025 オペレーションコストEye. All Rights Reserved.</p>
-            <p class="mt-1">Version 7.0 (Final)</p>
+            <p class="mt-1">Version 8.0 (Final)</p>
         </footer>
     </div>
 
@@ -796,24 +796,24 @@ const exportToPDF = async () => {
     const chartCanvases = activeContent.querySelectorAll('canvas');
     const tempImageStore = [];
 
+    // 元のbodyの背景色を保存
+    const originalBodyBg = document.body.style.backgroundColor;
+
     try {
-        // ★★★ 新しいアプローチ：グラフを画像に変換 ★★★
+        // ★★★ 根本対策：Bodyの背景を白にする ★★★
+        document.body.style.backgroundColor = '#ffffff';
+
+        // ★★★ グラフを画像に変換 ★★★
         for (const chartCanvas of chartCanvases) {
-            // Chart.jsのインスタンスを取得
             const chartInstance = Chart.getChart(chartCanvas);
             if (chartInstance) {
-                // グラフをBase64形式の画像データに変換
                 const imgDataUrl = chartInstance.toBase64Image();
-                
-                // 元のCanvasを非表示にする
-                chartCanvas.style.display = 'none';
-
-                // 静的な画像を作成して元のCanvasの前に挿入
                 const img = new Image();
                 img.src = imgDataUrl;
                 img.style.width = chartCanvas.style.width;
                 img.style.height = chartCanvas.style.height;
-                img.classList.add('temp-chart-image'); // 後で削除するための目印
+                img.classList.add('temp-chart-image');
+                chartCanvas.style.display = 'none';
                 chartCanvas.parentNode.insertBefore(img, chartCanvas);
                 tempImageStore.push({ canvas: chartCanvas, image: img });
             }
@@ -830,8 +830,7 @@ const exportToPDF = async () => {
         // html2canvasで要素をキャプチャ
         const canvas = await html2canvas(captureArea, {
             scale: 2,
-            useCORS: true, 
-            backgroundColor: '#ffffff',
+            backgroundColor: '#ffffff', // ★★★ 背景色を明示的に指定 ★★★
             logging: true
         });
 
@@ -842,22 +841,18 @@ const exportToPDF = async () => {
         const pdfWidth = pdf.internal.pageSize.getWidth();
         const pdfHeight = pdf.internal.pageSize.getHeight();
         
-        // 画像のサイズを取得
         const imgWidth = canvas.width;
         const imgHeight = canvas.height;
         
-        // PDFの幅に合わせて画像のアスペクト比を維持
         const ratio = imgWidth / imgHeight;
-        let widthInPdf = pdfWidth - 20; // 左右に10mmずつのマージン
+        let widthInPdf = pdfWidth - 20;
         let heightInPdf = widthInPdf / ratio;
         
-        // 画像の高さがPDFの高さを超える場合は、高さを基準にリサイズ
         if (heightInPdf > pdfHeight - 20) {
-            heightInPdf = pdfHeight - 20; // 上下に10mmずつのマージン
+            heightInPdf = pdfHeight - 20;
             widthInPdf = heightInPdf * ratio;
         }
 
-        // ページ中央に画像を配置するための座標を計算
         const x = (pdfWidth - widthInPdf) / 2;
         const y = (pdfHeight - heightInPdf) / 2;
         
@@ -869,13 +864,15 @@ const exportToPDF = async () => {
         alert('PDFの生成に失敗しました。コンソールログを確認してください。');
     } finally {
         // ★★★ 処理が終わったら必ず元の状態に戻す ★★★
-        // 一時的な画像を削除し、元のグラフを再表示
+        document.body.style.backgroundColor = originalBodyBg;
+
         tempImageStore.forEach(item => {
             item.canvas.style.display = 'block';
-            item.image.remove();
+            if (item.image.parentNode) {
+                item.image.parentNode.removeChild(item.image);
+            }
         });
         
-        // 削除したタブを元に戻す
         if (!inactiveContent.parentNode) {
             captureArea.insertBefore(inactiveContent, activeContent.nextSibling);
         }
@@ -961,4 +958,4 @@ window.addEventListener('load', initializeApp);
 
 </script>
 </body>
-<
+</html
