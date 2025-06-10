@@ -10,10 +10,11 @@
     <!-- PDF出力用のライブラリを追加 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- 外部フォントの読み込みを削除し、標準フォントを使用するように変更 -->
     <style>
         body {
-            font-family: 'Noto Sans JP', 'Inter', sans-serif;
+            /* 標準的な日本語フォントを指定 */
+            font-family: 'Meiryo', 'Hiragino Kaku Gothic ProN', 'MS PGothic', sans-serif;
             background-color: #f0f2f5;
         }
         .tab-active {
@@ -316,14 +317,15 @@
         
         <footer class="text-center mt-8 text-sm text-gray-400">
             <p>&copy; 2025 オペレーションコストEye. All Rights Reserved.</p>
-            <p class="mt-1">Version 4.0 (Final)</p>
+            <p class="mt-1">Version 5.0 (Final)</p>
         </footer>
     </div>
 
 <script>
 // --- Chart.jsのグローバル設定 ---
 Chart.register(ChartDataLabels);
-Chart.defaults.font.family = "'Noto Sans JP', 'Inter', sans-serif";
+// グラフのデフォルトフォントも変更
+Chart.defaults.font.family = "'Meiryo', 'Hiragino Kaku Gothic ProN', 'MS PGothic', sans-serif";
 Chart.defaults.plugins.datalabels.display = false; // デフォルトでは非表示
 
 // --- DOM要素の取得 (共通) ---
@@ -783,7 +785,7 @@ const exportToPDF = async () => {
 
     // ボタンを処理中の表示に変更
     pdfExportBtn.disabled = true;
-    pdfExportBtn.innerHTML = 'フォント読込中...';
+    pdfExportBtn.innerHTML = 'PDF生成中...';
 
     // 現在アクティブなタブを特定
     const isBackwardActive = tabBackward.classList.contains('tab-active');
@@ -792,14 +794,10 @@ const exportToPDF = async () => {
     const parent = inactiveContent.parentNode;
 
     try {
-        // ★★★根本原因への対策：フォントの読み込みを確実に待つ★★★
-        await document.fonts.ready;
-        console.log('フォントの準備が完了しました。PDF生成を開始します。');
-        
-        pdfExportBtn.innerHTML = 'PDF生成中...';
-
         // 非表示のタブをDOMから一時的に削除
-        parent.removeChild(inactiveContent);
+        if (parent.contains(inactiveContent)) {
+            parent.removeChild(inactiveContent);
+        }
         
         // ブラウザの再描画を待つ
         await new Promise(resolve => requestAnimationFrame(resolve));
@@ -807,7 +805,7 @@ const exportToPDF = async () => {
         // html2canvasで要素をキャプチャ
         const canvas = await html2canvas(captureArea, {
             scale: 2,
-            useCORS: true,
+            useCORS: true, 
             backgroundColor: '#ffffff',
             logging: true
         });
@@ -847,7 +845,8 @@ const exportToPDF = async () => {
     } finally {
         // 処理が終わったら、削除した要素を必ず元に戻す
         if (!parent.contains(inactiveContent)) {
-             parent.appendChild(inactiveContent);
+            // 元の場所に戻す（contentBackwardの次）
+            parent.insertBefore(inactiveContent, contentBackward.nextSibling);
         }
         pdfExportBtn.disabled = false;
         pdfExportBtn.innerHTML = originalButtonHtml;
