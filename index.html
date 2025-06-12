@@ -229,19 +229,19 @@
                     <!-- 感度分析セクション -->
                     <div id="what-if-section" class="mt-6 p-4 border-t-2 border-dashed">
                         <h3 class="text-lg font-bold text-center text-gray-700 mb-3">感度分析 (What-if)</h3>
-                        <div class="flex flex-wrap justify-center items-center gap-2">
-                            <span>もし、</span>
-                            <select id="what-if-category" class="input-field h-24" multiple></select>
-                            <span>が</span>
-                            <input type="number" id="what-if-percentage" class="input-field text-right w-24" placeholder="例: 10">
-                            <span>%</span>
-                            <select id="what-if-direction" class="input-field w-auto">
+                        <div class="flex items-center justify-center gap-2 flex-wrap md:flex-nowrap">
+                            <span class="whitespace-nowrap">もし、</span>
+                            <select id="what-if-category" class="input-field p-1 h-20 w-64" multiple></select>
+                            <span class="whitespace-nowrap">が</span>
+                            <input type="number" id="what-if-percentage" class="input-field p-2 text-right w-24" placeholder="例: 10">
+                            <span class="whitespace-nowrap">%</span>
+                            <select id="what-if-direction" class="input-field p-2 w-24">
                                 <option value="increase">上昇</option>
                                 <option value="decrease">下落</option>
                             </select>
-                            <span>したら？</span>
-                            <button id="what-if-apply" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition">分析を実行</button>
-                            <button id="what-if-reset" class="bg-gray-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-600 transition">リセット</button>
+                            <span class="whitespace-nowrap">したら？</span>
+                            <button id="what-if-apply" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition whitespace-nowrap">分析を実行</button>
+                            <button id="what-if-reset" class="bg-gray-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-600 transition whitespace-nowrap">リセット</button>
                         </div>
                         <p class="text-xs text-gray-500 text-center mt-2">※ Ctrlキー(Macの場合はCommandキー)を押しながら項目をクリックすると、複数選択が可能です。</p>
                     </div>
@@ -650,9 +650,9 @@ const comparisonMode = (() => {
         item.className = 'cost-item';
         const categoryOptions = categories.map(c => `<option value="${c}" ${c === category ? 'selected' : ''}>${c}</option>`).join('');
         item.innerHTML = `
-            <select class="input-field item-category" style="width: 120px; flex-shrink: 0;">${categoryOptions}</select>
-            <input type="text" class="input-field item-name flex-grow" placeholder="項目名" value="${name}">
-            <input type="number" class="input-field item-value text-right" placeholder="金額" value="${value}" style="width: 120px; flex-shrink: 0;" step="500">
+            <select class="input-field text-sm" style="width: 120px; flex-shrink: 0;">${categoryOptions}</select>
+            <input type="text" class="input-field text-sm" style="flex-grow: 1; min-width: 0;" placeholder="項目名" value="${name}">
+            <input type="number" class="input-field text-sm text-right" placeholder="金額" value="${value}" style="width: 120px; flex-shrink: 0;" step="500">
             <button type="button" class="btn-delete" style="flex-shrink: 0;">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/><path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/></svg>
             </button>`;
@@ -664,9 +664,9 @@ const comparisonMode = (() => {
     const getCostData = (modelId) => {
         const items = Array.from(document.querySelectorAll(`#model-${modelId}-items .cost-item`));
         const costData = items.map(item => ({
-            category: item.querySelector('.item-category').value,
-            name: item.querySelector('.item-name').value || '無名の項目',
-            value: parseFloat(item.querySelector('.item-value').value) || 0,
+            category: item.querySelector('select').value,
+            name: item.querySelector('input[type="text"]').value || '無名の項目',
+            value: parseFloat(item.querySelector('input[type="number"]').value) || 0,
         })).filter(d => d.value > 0);
         const totalCost = costData.reduce((sum, item) => sum + item.value, 0);
         const categorized = costData.reduce((acc, item) => {
