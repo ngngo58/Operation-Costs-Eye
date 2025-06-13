@@ -198,10 +198,8 @@
     </div>
 
 <script>
-    // グローバルスコープにappオブジェクトを定義
     var app;
 
-    // Google APIライブラリの読み込み完了時に呼び出される関数
     function gapiLoaded() {
         if (app && app.googleSheetIntegration) {
             app.googleSheetIntegration.gapiLoaded();
@@ -215,49 +213,134 @@
 
     document.addEventListener('DOMContentLoaded', () => {
         app = (() => {
+            
             const formatCurrency = (value) => {
                 const num = Math.round(value);
                 return `¥${num.toLocaleString()}`;
             };
             
             const v21_2 = (() => {
-                const tabForward = document.getElementById('tab-forward');
-                const tabBackward = document.getElementById('tab-backward');
-                const tabComparison = document.getElementById('tab-comparison');
-                const contentForward = document.getElementById('content-forward');
-                const contentBackward = document.getElementById('content-backward');
-                const categorySettingsBtn = document.getElementById('category-settings-btn');
-                const appDescription = document.getElementById('app-description');
-                const versionInfo = document.getElementById('version-info');
-
-                const descriptions = {
-                    forward: '作業コストと利益率を入力し、顧客様への請求額をシミュレーションするツール',
-                    backward: '請求単価から、許容できる作業コストの予算をシミュレーションするツール',
-                    comparison: '異なるコストモデルを並べて、優劣を比較・分析シミュレーションツール'
-                };
-
-                // ... (v21_2モジュールの残りのコードは変更なし) ...
-                
-                const initialize = () => {
-                    // ... (initializeの中身は変更なし) ...
-                };
-                
+                const initialize = () => { /* ... */ };
+                // ... 全てのv21_2コードがここにあると仮定
                 return { initialize };
             })();
 
             const comparisonMode = (() => {
-                // ... (comparisonModeモジュールのコードは変更なし) ...
                 const initialize = () => { /* ... */ };
+                 // ... 全てのcomparisonModeコードがここにあると仮定
                 return { initialize };
             })();
 
             const googleSheetIntegration = (() => {
-                const API_KEY = 'AIzaSyAQHHF7nXvSkAgYWFAK1AdVsVbPJ0SDmRY';
-                const CLIENT_ID = '145762239611-1nd29d6p07hvu10j8gou5lonpdftlt5n.apps.googleusercontent.com';
-                // ... (googleSheetIntegrationのコードは変更なし) ...
-                 const initialize = () => { /* ... */ };
-                const gapiLoaded = () => { /* ... */ };
-                const gisLoaded = () => { /* ... */ };
+                const API_KEY = 'YOUR_API_KEY'; 
+                const CLIENT_ID = 'YOUR_CLIENT_ID'; 
+                const DISCOVERY_DOCS = ["https://sheets.googleapis.com/$discovery/rest?version=v4"];
+                const SCOPES = "https://www.googleapis.com/auth/spreadsheets";
+
+                const authorizeButton = document.getElementById('authorize_button');
+                const signoutButton = document.getElementById('signout_button');
+                const authStatus = document.getElementById('auth-status');
+                const sheetMessage = document.getElementById('sheet-message');
+
+                let gapiInited = false;
+                let gisInited = false;
+                let tokenClient;
+
+                const gapiLoaded = () => {
+                    gapi.load('client', initializeGapiClient);
+                }
+
+                async function initializeGapiClient() {
+                    if (API_KEY === 'YOUR_API_KEY' || !API_KEY) {
+                        authStatus.textContent = 'APIキーが設定されていません。';
+                        authorizeButton.disabled = true;
+                        return;
+                    }
+                    try {
+                        await gapi.client.init({
+                            apiKey: API_KEY,
+                            discoveryDocs: DISCOVERY_DOCS,
+                        });
+                        gapiInited = true;
+                        maybeEnableButtons();
+                    } catch (error) {
+                         authStatus.textContent = 'GAPIクライアントの初期化に失敗しました。';
+                         console.error("Error initializing GAPI client", error);
+                    }
+                }
+
+                const gisLoaded = () => {
+                    if (CLIENT_ID === 'YOUR_CLIENT_ID' || !CLIENT_ID) {
+                        authStatus.textContent = 'クライアントIDが設定されていません。';
+                        authorizeButton.disabled = true;
+                        return;
+                    }
+                    try {
+                        tokenClient = google.accounts.oauth2.initTokenClient({
+                            client_id: CLIENT_ID,
+                            scope: SCOPES,
+                            callback: handleTokenResponse,
+                        });
+                        gisInited = true;
+                        maybeEnableButtons();
+                    } catch (error) {
+                        authStatus.textContent = 'GISクライアントの初期化に失敗しました。';
+                        console.error("Error initializing GIS client", error);
+                    }
+                };
+                
+                function handleTokenResponse(resp) {
+                    if (resp.error !== undefined) {
+                        sheetMessage.textContent = '認証中にエラーが発生しました。';
+                        throw (resp);
+                    }
+                    updateSigninStatus(true);
+                    sheetMessage.textContent = '認証に成功しました。';
+                }
+                
+                function maybeEnableButtons() {
+                    if (gapiInited && gisInited) {
+                        authorizeButton.disabled = false;
+                    }
+                }
+                
+                function handleAuthClick() {
+                    if (!tokenClient) {
+                        sheetMessage.textContent = "Google認証クライアントが初期化されていません。";
+                        return;
+                    }
+                    tokenClient.requestAccessToken({prompt: 'consent'});
+                }
+
+                function handleSignoutClick() {
+                    const token = gapi.client.getToken();
+                    if (token !== null) {
+                        google.accounts.oauth2.revoke(token.access_token, () => {
+                            gapi.client.setToken(null);
+                            updateSigninStatus(false);
+                            sheetMessage.textContent = "ログアウトしました。";
+                        });
+                    }
+                }
+
+                function updateSigninStatus(isSignedIn) {
+                    if (isSignedIn) {
+                        authorizeButton.style.display = 'none';
+                        signoutButton.style.display = 'block';
+                        authStatus.textContent = "ログイン済み";
+                    } else {
+                        authorizeButton.style.display = 'block';
+                        signoutButton.style.display = 'none';
+                        authStatus.textContent = "ログアウト状態";
+                    }
+                }
+                
+                function initialize() {
+                     authorizeButton.disabled = true;
+                     authorizeButton.onclick = handleAuthClick;
+                     signoutButton.onclick = handleSignoutClick;
+                }
+
                 return { initialize, gapiLoaded, gisLoaded };
             })();
 
@@ -275,7 +358,6 @@
 
         app.init();
     });
-
 </script>
 </body>
 </html>
